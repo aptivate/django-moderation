@@ -169,7 +169,14 @@ class ModeratedObject(models.Model):
             self.changed_object.save()
 
         else:
+            if self.moderator.visibility_column:
+                if status == MODERATION_STATUS_REJECTED:
+                    setattr(self.changed_object, self.moderator.visibility_column,
+                            False)
+                    self.changed_object.save()
+
             self.save()
+
         if status == MODERATION_STATUS_REJECTED and\
            self.moderator.visible_until_rejected:
             self.changed_object.save()
