@@ -11,6 +11,7 @@ from moderation.models import ModeratedObject, MODERATION_STATUS_APPROVED,\
     MODERATION_STATUS_PENDING, MODERATION_STATUS_REJECTED
 from moderation.fields import SerializedObjectField
 from moderation.register import ModerationManager, RegistrationError
+from moderation.managers import ModerationObjectsManager
 from moderation.moderator import GenericModerator
 from moderation.helpers import automoderate
 from tests.utils import setup_moderation, teardown_moderation
@@ -184,24 +185,31 @@ class ModerateTestCase(TestCase):
         self.assertEqual(self.profile.moderated_object.moderation_reason,
                          "Reason")
 
-    def test_approve_moderated_object(self):
-        """test if after object approval new data is saved."""
+    def test_multiple_moderations_throws_exception_by_default(self):
         self.profile.description = 'New description'
+        self.profile.save()
 
-        moderated_object = ModeratedObject(content_object=self.profile)
-
-        moderated_object.save()
-
+        moderated_object = ModeratedObject.objects.create(
+            content_object=self.profile)
         moderated_object.approve(moderated_by=self.user)
 
-        user_profile = UserProfile.objects.get(user__username='moderator')
+        with self.assertRaises(ModerationObjectsManager.MultipleModerations):
+            self.profile.__class__.objects.get(id=self.profile.id)
 
+    def test_approve_modified_moderated_object(self):
+        """test if after object approval new data is saved."""
+        self.profile.description = 'New description'
+        self.profile.save()
+        self.profile.moderated_object.approve(self.user)
+
+        user_profile = self.profile.__class__.objects.get(
+            id=self.profile.id)
         self.assertEqual(user_profile.description, 'New description')
 
-    def test_approve_moderated_object_new_model_instance(self):
-        profile = UserProfile(description='Profile for new user',
-                              url='http://www.test.com',
-                              user=User.objects.get(username='user1'))
+    def test_approve_new_moderated_object(self):
+        profile = self.profile.__class__(description='Profile for new user',
+                                         url='http://www.test.com',
+                                         user=self.user)
 
         profile.save()
 
