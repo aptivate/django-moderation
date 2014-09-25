@@ -205,6 +205,7 @@ class ModerateTestCase(TestCase):
 
         user_profile = self.profile.__class__.objects.get(
             id=self.profile.id)
+        self.assertEqual(user_profile.description, 'New description')
 
     def test_approve_new_moderated_object(self):
         profile = self.profile.__class__(description='Profile for new user',
