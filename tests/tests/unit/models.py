@@ -194,8 +194,7 @@ class ModerateTestCase(TestCase):
         moderated_object.approve(moderated_by=self.user)
 
         with self.assertRaises(ModerationObjectsManager.MultipleModerations):
-            user_profile = self.profile.__class__.objects.get(
-                id=self.profile.id)
+            self.profile.__class__.objects.get(id=self.profile.id)
 
     def test_approve_modified_moderated_object(self):
         """test if after object approval new data is saved."""
