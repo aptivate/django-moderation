@@ -148,41 +148,54 @@ class ModeratedObject(models.Model):
 
         return moderation.get_moderator(model_class)
 
-    def _moderate(self, status, moderated_by, reason):
-        self.moderation_status = status
+    def _moderate(self, new_status, moderated_by, reason):
+        # See register.py pre_save_handler() for the case where the model is
+        # reset to its old values, and the new values are stored in the
+        # ModeratedObject. In such cases, on approval, we should restore the
+        # changes to the base object by saving the one attached to the
+        # ModeratedObject.
+
+        if (self.moderation_status == MODERATION_STATUS_PENDING and
+                new_status == MODERATION_STATUS_APPROVED and
+                not self.moderator.visible_until_rejected):
+            base_object = self.changed_object
+            base_object_force_save = True
+        else:
+            # The model in the database contains the most recent data already,
+            # or we're not ready to approve the changes stored in
+            # ModeratedObject.
+            obj_class = self.changed_object.__class__
+            pk = self.changed_object.pk
+            base_object = obj_class._default_manager.get(pk=pk)
+            base_object_force_save = False
+
+        self.moderation_status = new_status
         self.moderation_date = datetime.datetime.now()
         self.moderated_by = moderated_by
         self.moderation_reason = reason
+        self.save()
 
-        if status == MODERATION_STATUS_APPROVED:
-            if self.moderator.visible_until_rejected:
-                try:
-                    obj_class = self.changed_object.__class__
-                    pk = self.changed_object.pk
-                    unchanged_obj = obj_class._default_manager.get(pk=pk)
-                except obj_class.DoesNotExist:
-                    unchanged_obj = None
-                self.changed_object = unchanged_obj
+        if new_status == MODERATION_STATUS_APPROVED:
+            new_visible = True
+        elif new_status == MODERATION_STATUS_REJECTED:
+            new_visible = False
+        else: # MODERATION_STATUS_PENDING
+            new_visible = self.moderator.visible_until_rejected
 
-            if self.moderator.visibility_column:
-                setattr(self.changed_object, self.moderator.visibility_column,
-                        True)
+        if self.moderator.visibility_column:
+            old_visible = getattr(base_object,
+                self.moderator.visibility_column)
 
-            self.save()
-            self.changed_object.save()
+            if new_visible != old_visible:
+                setattr(base_object, self.moderator.visibility_column,
+                    new_visible)
 
-        else:
-            if self.moderator.visibility_column:
-                if status == MODERATION_STATUS_REJECTED:
-                    setattr(self.changed_object, self.moderator.visibility_column,
-                            False)
-                    self.changed_object.save()
-
-            self.save()
-
-        if status == MODERATION_STATUS_REJECTED and\
-           self.moderator.visible_until_rejected:
-            self.changed_object.save()
+            if new_visible != old_visible or base_object_force_save:
+                # avoid triggering pre/post_save_handler
+                base_object.save_base(raw=True)
+        elif base_object_force_save:
+            # avoid triggering pre/post_save_handler
+            base_object.save_base(raw=True)
 
         if self.changed_by:
             self.moderator.inform_user(self.content_object, self.changed_by)
