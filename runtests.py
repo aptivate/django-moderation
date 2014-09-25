@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+from os import path
 from os.path import dirname, abspath
 from optparse import OptionParser
 
@@ -13,6 +14,7 @@ if not settings.configured and not os.environ.get('DJANGO_SETTINGS_MODULE'):
         DATABASES={
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
+                # 'TEST_NAME': path.join(dirname(__file__), 'test.sqlite'),
             }
         },
         INSTALLED_APPS=[

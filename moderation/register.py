@@ -136,6 +136,7 @@ class ModerationManager(with_metaclass(ModerationManagerSingleton, object)):
         Create a new moderation for the instance if it doesn't have any.
         If it does have a previous moderation, get that one
         """
+
         # check if object was loaded from fixture, bypass moderation if so
         if kwargs['raw']:
             return
@@ -236,27 +237,30 @@ class ModerationManager(with_metaclass(ModerationManagerSingleton, object)):
             moderated_obj = ModeratedObject(content_object=old_object)
             moderated_obj.save()
             moderator.inform_moderator(instance)
-        else:
+            return
 
-            if moderated_obj.moderation_status == \
-               MODERATION_STATUS_APPROVED and \
-               moderator.bypass_moderation_after_approval:
-                return
+        if (moderated_obj.moderation_status == MODERATION_STATUS_APPROVED and
+            moderator.bypass_moderation_after_approval):
 
-            if moderated_obj.has_object_been_changed(instance):
-                copied_instance = self._copy_model_instance(instance)
+            # save new data in moderated object
+            moderated_obj.changed_object = instance
+            moderated_obj.save()
+            return
 
-                if not moderator.visible_until_rejected:
-                    # save instance with data from changed_object
-                    moderated_obj.changed_object.save_base(raw=True)
+        if moderated_obj.has_object_been_changed(instance):
+            copied_instance = self._copy_model_instance(instance)
 
-                    # save new data in moderated object
-                    moderated_obj.changed_object = copied_instance
+            if not moderator.visible_until_rejected:
+                # save instance with data from changed_object
+                moderated_obj.changed_object.save_base(raw=True)
 
-                moderated_obj.moderation_status = MODERATION_STATUS_PENDING
-                moderated_obj.save()
-                moderator.inform_moderator(instance)
-                instance._moderated_object = moderated_obj
+                # save new data in moderated object
+                moderated_obj.changed_object = copied_instance
+
+            moderated_obj.moderation_status = MODERATION_STATUS_PENDING
+            moderated_obj.save()
+            moderator.inform_moderator(instance)
+            instance._moderated_object = moderated_obj
 
     def _copy_model_instance(self, obj):
         initial = dict(
