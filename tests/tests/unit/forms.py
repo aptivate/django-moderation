@@ -55,7 +55,10 @@ class FormsTestCase(TestCase):
 
         profile = UserProfile.objects.get(id=1)
 
-        self.assertEqual(profile.description, "old description")
+        self.assertEqual(profile.description, "Changed description",
+            "Because this object has never been approved, there's no "
+            "approved version backed up in changed_object and the latest "
+            "data is stored in the object itself, which is invisible.")
         self.assertEqual(form.initial['description'], 'Changed description')
 
     def test_if_form_has_image_field_instance_of_image_field_file(self):

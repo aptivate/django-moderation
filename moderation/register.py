@@ -182,20 +182,18 @@ class ModerationManager(with_metaclass(ModerationManagerSingleton, object)):
 
             moderated_object = ModeratedObject.objects.get_for_instance(
                 instance)
-            if moderated_object is None:
-                moderated_object = get_new_instance(unchanged_obj)
-            elif moderator.keep_history and \
-                    moderated_object.has_object_been_changed(
-                    instance):
+            if (moderator.keep_history and
+                  (moderated_object.changed_object is None or
+                   moderated_object.has_object_been_changed(instance))):
                 # We're keeping history and this isn't an update of an existing
                 # moderation
                 moderated_object = get_new_instance(unchanged_obj)
-
         except ObjectDoesNotExist:
             moderated_object = get_new_instance(unchanged_obj)
 
         else:
-            if moderated_object.has_object_been_changed(instance):
+            if (moderated_object.changed_object is not None and
+                    moderated_object.has_object_been_changed(instance)):
                 if moderator.visible_until_rejected:
                     moderated_object.changed_object = instance
                 else:
@@ -228,7 +226,11 @@ class ModerationManager(with_metaclass(ModerationManagerSingleton, object)):
 
         if kwargs['created']:
             old_object = sender._default_manager.get(pk=pk)
+            # Save a ModeratedObject with no changed_object, just an object_pk,
+            # indicating that there's never been an approved version to revert
+            # to if it's rejected, and so it should be hidden in that case.
             moderated_obj = ModeratedObject(content_object=old_object)
+            moderated_obj.instance = None
             moderated_obj.save()
             moderator.inform_moderator(instance)
             return
@@ -243,10 +245,16 @@ class ModerationManager(with_metaclass(ModerationManagerSingleton, object)):
             moderated_obj.save()
             return
 
-        if moderated_obj.has_object_been_changed(instance):
-            copied_instance = self._copy_model_instance(instance)
+        if (moderated_obj.changed_object is None or
+                moderated_obj.has_object_been_changed(instance)):
 
-            if not moderator.visible_until_rejected:
+            if moderated_obj.changed_object is None:
+                # Don't overwrite the empty changed_object, which means that
+                # this object is newly created.
+                pass
+            elif not moderator.visible_until_rejected:
+                copied_instance = self._copy_model_instance(instance)
+
                 # Save instance with old data from changed_object, undoing
                 # the changes that save() just saved to the database.
                 moderated_obj.changed_object.save_base(raw=True)

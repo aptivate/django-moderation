@@ -158,8 +158,9 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
         moderated_object = ModeratedObject.objects.get(pk=object_id)
 
         changed_obj = moderated_object.changed_object
+        object_class = moderated_object.content_object.__class__
 
-        moderator = moderation.get_moderator(changed_obj.__class__)
+        moderator = moderation.get_moderator(object_class)
 
         if moderator.visible_until_rejected:
             old_object = changed_obj
@@ -182,12 +183,11 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
                 elif 'reject' in request.POST:
                     moderated_object.reject(request.user, reason)
 
-        content_type = ContentType.objects.get_for_model(changed_obj.__class__)
+        content_type = ContentType.objects.get_for_model(object_class)
         try:
-            object_admin_url = urlresolvers.reverse("admin:%s_%s_change" %
-                                                    (content_type.app_label,
-                                                     content_type.model),
-                                                    args=(changed_obj.pk,))
+            object_admin_url = urlresolvers.reverse(
+                "admin:%s_%s_change" % (content_type.app_label,
+                content_type.model), args=(moderated_object.object_pk,))
         except urlresolvers.NoReverseMatch:
             object_admin_url = None
 

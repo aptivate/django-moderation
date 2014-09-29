@@ -50,18 +50,24 @@ class ImageChange(BaseChange):
             'moderation/image_diff.html',
             {'left_image': left_image, 'right_image': right_image})
 
+def get_value_from_model(model, field, resolve_foreignkeys=False):
+    if model is None:
+        return None
 
-def get_change(model1, model2, field, resolve_foreignkeys=False):
     try:
-        value1 = getattr(model1, "get_%s_display" % field.name)()
-        value2 = getattr(model2, "get_%s_display" % field.name)()
+        value = getattr(model, "get_%s_display" % field.name)()
     except AttributeError:
         if isinstance(field, ForeignObject) and resolve_foreignkeys:
-            value1 = str(getattr(model1, field.name))
-            value2 = str(getattr(model2, field.name))
+            value = str(getattr(model, field.name))
         else:
-            value1 = field.value_from_object(model1)
-            value2 = field.value_from_object(model2)
+            value = field.value_from_object(model)
+
+    return value
+
+
+def get_change(model1, model2, field, resolve_foreignkeys=False):
+    value1 = get_value_from_model(model1, field, resolve_foreignkeys)
+    value2 = get_value_from_model(model2, field, resolve_foreignkeys)
 
     change = get_change_for_type(
         field.verbose_name,

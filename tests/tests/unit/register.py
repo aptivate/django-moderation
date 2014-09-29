@@ -678,7 +678,7 @@ class ModerationSignalsTestCase(TestCase):
                               user=User.objects.get(username='user1'))
 
         profile.save()
-
+        self.assertEqual(1, ModeratedObject.objects.count())
         moderated_object = ModeratedObject.objects.get_for_instance(profile)
 
         self.assertEqual(moderated_object.content_object, profile)
@@ -687,8 +687,12 @@ class ModerationSignalsTestCase(TestCase):
         profile.url = 'http://www.google.com'
         profile.save()
 
+        old_moderated_object = moderated_object
         moderated_object = ModeratedObject.objects.get_for_instance(profile)
         self.assertEqual(moderated_object.content_object, profile)
+        self.assertNotEqual(moderated_object, old_moderated_object,
+            "The two ModeratedObjects should be different when keeping "
+            "history!")
 
         # There should only be two moderated objects
         self.assertEqual(2, ModeratedObject.objects.count())

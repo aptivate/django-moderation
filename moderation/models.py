@@ -71,10 +71,16 @@ class ModeratedObject(models.Model):
         super(ModeratedObject, self).__init__(*args, **kwargs)
 
     def __unicode__(self):
-        return "%s" % self.changed_object
+        if self.changed_object is None:
+            return "%s" % self.content_object
+        else:
+            return "%s" % self.changed_object
 
     def __str__(self):
-        return "%s" % self.changed_object
+        if self.changed_object is None:
+            return "%s" % self.content_object
+        else:
+            return "%s" % self.changed_object
 
     def save(self, *args, **kwargs):
         if self.instance:
@@ -157,15 +163,16 @@ class ModeratedObject(models.Model):
 
         if (self.moderation_status == MODERATION_STATUS_PENDING and
                 new_status == MODERATION_STATUS_APPROVED and
-                not self.moderator.visible_until_rejected):
+                not self.moderator.visible_until_rejected and
+                self.changed_object is not None):
             base_object = self.changed_object
             base_object_force_save = True
         else:
             # The model in the database contains the most recent data already,
             # or we're not ready to approve the changes stored in
             # ModeratedObject.
-            obj_class = self.changed_object.__class__
-            pk = self.changed_object.pk
+            obj_class = self.content_object.__class__
+            pk = self.content_object.pk
             base_object = obj_class._default_manager.get(pk=pk)
             base_object_force_save = False
 
@@ -199,6 +206,9 @@ class ModeratedObject(models.Model):
             self.moderator.inform_user(self.content_object, self.changed_by)
 
     def has_object_been_changed(self, original_obj, fields_exclude=None):
+        assert self.changed_object is not None, (
+            "Don't call this with a new object! Check whether "
+            "self.changed_object is None before calling.")
         if fields_exclude is None:
             fields_exclude = self.moderator.fields_exclude
         changes = get_changes_between_models(original_obj,

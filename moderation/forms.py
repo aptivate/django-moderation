@@ -12,12 +12,18 @@ class BaseModeratedObjectForm(ModelForm):
 
         if instance:
             try:
-                if instance.moderated_object.moderation_status in\
-                   [MODERATION_STATUS_PENDING, MODERATION_STATUS_REJECTED] and\
-                   not instance.moderated_object.moderator.\
-                   visible_until_rejected:
-                    initial = model_to_dict(
-                        instance.moderated_object.changed_object)
+                if (instance.moderated_object.moderation_status in
+                        [MODERATION_STATUS_PENDING, MODERATION_STATUS_REJECTED] and
+                        not instance.moderated_object.moderator.\
+                        visible_until_rejected):
+
+                    if instance.moderated_object.changed_object is None:
+                        initial = model_to_dict(
+                            instance.moderated_object.content_object)
+                    else:
+                        initial = model_to_dict(
+                            instance.moderated_object.changed_object)
+
                     kwargs.setdefault('initial', {})
                     kwargs['initial'].update(initial)
             except ObjectDoesNotExist:

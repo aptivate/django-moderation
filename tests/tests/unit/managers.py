@@ -149,3 +149,5 @@ class ModeratedObjectManagerTestCase(TestCase):
         moderated_object_pk1 = ModeratedObject.objects.get(pk=1)
         self.assertEqual('http://www.yahoo.com',
                          moderated_object_pk1.changed_object.url)
+
+
