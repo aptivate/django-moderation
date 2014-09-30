@@ -42,7 +42,7 @@ class ModeratedObject(models.Model):
     date_updated = models.DateTimeField(auto_now=True,
                                         default=datetime.datetime.now)
     moderation_state = models.SmallIntegerField(choices=MODERATION_STATES,
-                                                default=MODERATION_READY_STATE,
+                                                default=MODERATION_DRAFT_STATE,
                                                 editable=False)
     moderation_status = models.SmallIntegerField(
         choices=STATUS_CHOICES,
@@ -169,6 +169,11 @@ class ModeratedObject(models.Model):
             base_object = obj_class._default_manager.get(pk=pk)
             base_object_force_save = False
 
+        if new_status == MODERATION_STATUS_APPROVED:
+            # This version is now approved, and will be reverted to if
+            # future changes are rejected by a moderator.
+            self.moderation_state = MODERATION_READY_STATE
+
         self.moderation_status = new_status
         self.moderation_date = datetime.datetime.now()
         self.moderated_by = moderated_by
@@ -179,12 +184,8 @@ class ModeratedObject(models.Model):
             old_visible = getattr(base_object,
                                   self.moderator.visibility_column)
 
-            if new_status == MODERATION_STATUS_APPROVED:
-                new_visible = True
-            elif new_status == MODERATION_STATUS_REJECTED:
-                new_visible = False
-            else:  # MODERATION_STATUS_PENDING
-                new_visible = self.moderator.visible_until_rejected
+            # TODO FIXME test that this works for models with visibility fields
+            new_visible = (self.moderation_state == MODERATION_READY_STATE)
 
             if new_visible != old_visible:
                 setattr(base_object, self.moderator.visibility_column,

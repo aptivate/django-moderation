@@ -138,11 +138,6 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
     def content_object(self, obj):
         return str(obj.changed_object)
 
-    def queryset(self, request):
-        qs = super(ModeratedObjectAdmin, self).queryset(request)
-
-        return qs.exclude(moderation_state=MODERATION_DRAFT_STATE)
-
     def get_moderated_object_form(self, model_class):
 
         class ModeratedObjectForm(ModelForm):

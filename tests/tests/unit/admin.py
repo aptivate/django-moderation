@@ -100,11 +100,6 @@ class AdminActionsTestCase(TestCase):
     def tearDown(self):
         teardown_moderation()
 
-    def test_queryset_should_return_only_moderation_ready_objects(self):
-        qs = self.admin.queryset(self.request)
-        qs = qs.filter(moderation_state=MODERATION_DRAFT_STATE)
-        self.assertEqual(list(qs), [])
-
     def test_approve_objects(self):
         approve_objects(self.admin, self.request, self.moderated_objects)
 
