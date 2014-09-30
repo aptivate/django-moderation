@@ -15,8 +15,9 @@ class ModerationObjectsManager(Manager):
         def __init__(self, base_object):
             self.base_object = base_object
             super(ModerationObjectsManager.MultipleModerations,
-                  self).__init__("Multiple moderations "
-                "found for a single object, %s" % base_object)
+                  self).__init__(
+                "Multiple moderations found for a single object, %s" %
+                base_object)
 
     def __call__(self, base_manager, *args, **kwargs):
         return MetaClass(
