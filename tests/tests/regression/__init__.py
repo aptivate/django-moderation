@@ -95,7 +95,8 @@ class BypassOverwritesUpdatedObjectRegressionTestCase(TestCase):
         obj.save()
 
         # It's never been approved before, so it's now invisible
-        self.assertEqual([], list(ModelWithVisibilityField.objects.all()),
+        self.assertEqual(
+            [], list(ModelWithVisibilityField.objects.all()),
             "The ModelWithVisibilityField has never been approved and is now "
             "pending, so it should be hidden")
         # So approve it
@@ -104,8 +105,9 @@ class BypassOverwritesUpdatedObjectRegressionTestCase(TestCase):
         obj = ModelWithVisibilityField.objects.get()
         self.assertEqual('initial', obj.test)
 
-        # Now change it again. Because bypass_moderation_after_approval is True,
-        # it should still be visible and we shouldn't need to approve it again.
+        # Now change it again. Because bypass_moderation_after_approval is
+        # True, it should still be visible and we shouldn't need to approve it
+        # again.
         obj.test = 'modified'
         obj.save()
         obj = ModelWithVisibilityField.objects.get()
